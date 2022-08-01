@@ -4,7 +4,8 @@
   "description": "Yodaplus Base Template (React, Django, Celery, Web3)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docker": "docker-compose   -f infra/docker-compose.base.yml   -f infra/docker-compose.build.yml   -f infra/docker-compose.dev.yml   --project-name yodaplus-base-dev   --project-directory ./"
   },
   "workspaces": [
     "frontend",
