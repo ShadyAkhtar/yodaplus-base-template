@@ -11,11 +11,19 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+import environ
+from celery.schedules import crontab
+import json
+from utils import parseAddress
 
+
+env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+STATIC_ROOT = str(BASE_DIR / "staticfiles")
+MEDIA_ROOT = str(BASE_DIR / "media")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
@@ -25,10 +33,15 @@ SECRET_KEY = 'django-insecure-c%hqm$5@ms#juod7eo1xvf*3ec21hu(l@llv-2^8cl_u!1jvog
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['*'])
 
 
+def readFileJSON(path):
+    with open(os.path.join(os.path.dirname(__file__),
+                           path), 'r') as f:
+        return json.load(f)
 # Application definition
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -37,9 +50,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'django_rest_passwordreset',
+    'drf_yasg',
+    'django_extensions',
+    'django_filters',
+    'django_celery_beat',
+    'django_ethereum_events',
+    'eth',
+    'solo'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -73,13 +96,24 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+USE_POSTGRES = env.bool('USE_POSTGRES', default=False)
 
+if USE_POSTGRES:
+    DATABASES = {
+        'default': env.db('DATABASE_URL'),
+    }
+    DATABASES['default']['ATOMIC_REQUESTS'] = False
+    DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db' / 'db.sqlite3',
+        }
+    }
+
+REDIS_URL = env('REDIS_CACHE_URL',
+                default="redis://127.0.0.1:6379/1")
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -121,3 +155,47 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+STATIC_URL = env('STATIC_URL', default='/static/')
+MEDIA_URL = env('MEDIA_URL', default='/media/')
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication'
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+}
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+ADMIN_EMAIL = env('ADMIN_EMAIL', default="admin")
+ADMIN_XINFIN_ACCOUNT = parseAddress(
+    env('ADMIN_XINFIN_ACCOUNT', default="0x3c2070a2e512dd97881df8fa0af8f9889872fcad"))
+ADMIN_PASSWORD = env('ADMIN_PASSWORD', default="admin123")
+CELERY_BROKER_URL = env('CELERY_BROKER_URL',
+                        default="redis://127.0.0.1:6379/0")
+
+CELERY_BEAT_SCHEDULE = {
+    'poll_blockchain': {
+        'task': 'django_ethereum_events.tasks.event_listener',
+        'schedule': 5.0,
+        'options': {'queue': 'eth_events_poll'}
+    },
+
+}
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_TIMEZONE = "UTC"
+ETHEREUM_NODE_URI = env('ETHEREUM_NODE_URI',
+                        default='https://rpc-apothem.xinfin.yodaplus.net')
+
+ETHEREUM_GETH_POA = True
+NETWORK_ID = env('NETWORK_ID', default='51')

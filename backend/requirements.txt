@@ -20,7 +20,7 @@ coreapi==2.3.3
 coreschema==0.0.4
 cytoolz==0.12.0
 Deprecated==1.2.13
-Django==4.0.6
+Django==3.2.6
 django-celery-beat==2.3.0
 django-cors-headers==3.13.0
 django-environ==0.9.0
@@ -30,6 +30,7 @@ django-redis==5.2.0
 django-rest-passwordreset==1.2.1
 django-timezone-field==5.0
 djangorestframework==3.13.1
+django-solo==1.2.0
 drf-yasg==1.21.3
 eth-abi==2.2.0
 eth-account==0.5.8

@@ -21,5 +21,8 @@
     "JS"
   ],
   "author": "Yodaplus Dev",
-  "license": "ISC"
+  "license": "ISC",
+  "scripts": {
+    "docker": "docker-compose   -f infra/docker-compose.base.yml   -f infra/docker-compose.build.yml   -f infra/docker-compose.dev.yml   --project-name template-dev   --project-directory ./"
+  }
 }
